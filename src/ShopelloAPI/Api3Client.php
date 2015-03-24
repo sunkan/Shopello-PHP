@@ -47,6 +47,25 @@ class Api3Client
         $this->apiPassword = $apiPassword;
     }
 
+    /**
+     * Set API username
+     *
+     * @var string $apiUsername
+     * @return void
+     */
+    public function setApiUsername($apiUsername) {
+        $this->apiUsername = $apiUsername;
+    }
+
+    /**
+     * Set API username
+     *
+     * @var string $apiPassword
+     * @return void
+     */
+    public function setApiPassword($apiPassword) {
+        $this->apiPassword = $apiPassword;
+    }
 
     /**
      * Set API Endpoint, for example: https://se.shopelloapi.com/v3/
