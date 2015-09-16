@@ -68,6 +68,18 @@ class Api3Client
     }
 
     /**
+     * Set API Key
+     *
+     * @var string $apiKey
+     * @return void
+     */
+    public function setApiKey($apiKey)
+    {
+        $this->apiKey = $apiKey;
+    }
+
+
+    /**
      * Set API Endpoint, for example: https://se.shopelloapi.com/v3/
      *
      * @var strong $apiEndpoint
@@ -94,7 +106,7 @@ class Api3Client
     /**
      * Make API-call
      */
-    private function call($method, $uri, $getParams = array(), $postParams = array())
+    private function call($method, $uri, $getParams = array(), $postParams = array(), $authMethod = 'basic')
     {
         $uri = $this->apiEndpoint.$uri;
 
@@ -112,7 +124,18 @@ class Api3Client
         $this->curl->reset();
 
         $this->curl->setUserAgent('Shopello-PHP API Client/1.0');
-        $this->curl->setBasicAuthentication($this->apiUsername, $this->apiPassword);
+
+        switch ($authMethod) {
+            case 'apikey':
+                $this->curl->setHeader('X-API-KEY', $this->apiKey);
+                break;
+
+            case 'basic':
+            default:
+                $this->curl->setBasicAuthentication($this->apiUsername, $this->apiPassword);
+                break;
+        }
+
         $this->curl->setOpt(CURLOPT_ENCODING, 'gzip');
         $this->curl->setOpt(CURLOPT_HEADER, false);
         $this->curl->setOpt(CURLOPT_NOBODY, false);
@@ -129,6 +152,10 @@ class Api3Client
 
             case 'delete':
                 $this->curl->delete($uri, $getParams);
+                break;
+
+            case 'put':
+                $this->curl->put($uri.'?'.http_build_query($getParams), $postParams);
                 break;
 
             default:
@@ -181,5 +208,26 @@ class Api3Client
     public function getConsumerRevenue($startDate, $endDate)
     {
         return $this->call('get', 'consumer/revenue/'.$startDate.'/'.$endDate.'/');
+    }
+
+    /*******************************************************************************************************************
+     * Consumer Secret methods
+     */
+    public function getConsumerSecret()
+    {
+        return $this->call('get', 'consumer/secret/');
+    }
+
+    public function generateNewConsumerSecret()
+    {
+        return $this->call('put', 'consumer/secret/');
+    }
+
+    /*******************************************************************************************************************
+     * Deeplink generator
+     */
+    public function createDeepLink($uri)
+    {
+        return $this->call('post', 'deepLinkGenerator/', array(), array('uri' => $uri), 'apikey');
     }
 }
