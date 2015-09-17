@@ -139,6 +139,8 @@ class Api3Client
         $this->curl->setOpt(CURLOPT_ENCODING, 'gzip');
         $this->curl->setOpt(CURLOPT_HEADER, false);
         $this->curl->setOpt(CURLOPT_NOBODY, false);
+        $this->curl->setOpt(CURLOPT_CONNECTTIMEOUT, 3);
+        $this->curl->setOpt(CURLOPT_TIMEOUT, 300);
 
         // Do Request
         switch ($method) {
@@ -160,6 +162,10 @@ class Api3Client
 
             default:
                 throw new \Exception('Requested method behaviour is not defined yet');
+        }
+
+        if ($this->curl->curlErrorCode == 28) {
+            throw new \Exception('Connection timeout', 28);
         }
 
         $error = $this->curl->error;
