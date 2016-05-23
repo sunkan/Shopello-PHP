@@ -247,33 +247,4 @@ class ApiClient
 
         return $this->call($method);
     }
-
-    /**
-     * Get deep tracking link
-     *
-     * Important: Because we match on the domain part to find the correct store
-     * it is important to only chose those store that have activated deeplink
-     * see http://github.com/sunkan/Shopello-PHP/blob/master/deeplink.stores.txt
-     *
-     * Redirects will always go through. But no click will be registered
-     */
-    public function getDeepTrackingLink($url, $channel_id = false)
-    {
-        if (!$this->apiEndpointInfo) {
-            $this->apiEndpointInfo = parse_url($this->apiEndpoint);
-        }
-        $base = $this->apiEndpointInfo['scheme'] . '://' . $this->apiEndpointInfo['host'];
-        $base .= '/click/track?';
-
-        $query = [
-            'api_key' => $this->apiKey,
-            'url' => $url,
-        ];
-        if ($channel_id) {
-            $query['c'] = $channel_id;
-        }
-        $base .= http_build_query($query);
-
-        return $base;
-    }
 }
