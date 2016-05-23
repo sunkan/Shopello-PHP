@@ -19,6 +19,10 @@ class ApiClient
 
     private $apiEndpointInfo = null;
 
+    /**
+     * Persistent curl options
+     */
+    private $curlOptions = array();
 
     /**
      * @param Curl $curl
@@ -28,7 +32,6 @@ class ApiClient
     {
         $this->curl = $curl;
     }
-
 
     /**
      * Set API Key
@@ -40,7 +43,6 @@ class ApiClient
         $this->apiKey = $apiKey;
     }
 
-
     /**
      * Set API Endpoint, for example: https://se.shopelloapi.com/1/
      *
@@ -51,6 +53,35 @@ class ApiClient
         $this->apiEndpoint = $apiEndpoint;
     }
 
+    /**
+     * Set persistent cURL options
+     *
+     * @param array(<curlopt_constant> => <value>) $options
+     */
+    public function setCurlOptions($options)
+    {
+        $this->curlOptions = $options;
+    }
+
+    /**
+     * Apply cURL options
+     */
+    private function applyCurlOptions()
+    {
+        $this->curl->reset();
+
+        $this->curl->setUserAgent('Shopello-PHP API Client/1.0');
+        $this->curl->setHeader('X-API-KEY', $this->apiKey);
+        $this->curl->setOpt(CURLOPT_ENCODING, 'gzip');
+        $this->curl->setOpt(CURLOPT_HEADER, false);
+        $this->curl->setOpt(CURLOPT_NOBODY, false);
+        $this->curl->setOpt(CURLOPT_CONNECTTIMEOUT, 3);
+        $this->curl->setOpt(CURLOPT_TIMEOUT, 300);
+
+        foreach ($this->curlOptions as $key => $value) {
+            $this->curl->setOpt($key, $value);
+        }
+    }
 
     /**
      * Get Requested URI -- This is good for debugging purposes
@@ -63,9 +94,8 @@ class ApiClient
         $header = explode(' ', $this->curl->request_headers[0]);
         $endpoint['path'] = $header[1];
 
-        return $endpoint['scheme'].'://'.$endpoint['host'].$endpoint['path'];
+        return $endpoint['scheme'] . '://' . $endpoint['host'] . $endpoint['path'];
     }
-
 
     /**
      * Make API-call
@@ -83,20 +113,12 @@ class ApiClient
         );
 
         // CURL Stuff
-        $this->curl->reset();
-
-        $this->curl->setUserAgent('Shopello-PHP API Client/1.0');
-        $this->curl->setHeader('X-API-KEY', $this->apiKey);
-        $this->curl->setOpt(CURLOPT_ENCODING, 'gzip');
-        $this->curl->setOpt(CURLOPT_HEADER, false);
-        $this->curl->setOpt(CURLOPT_NOBODY, false);
-        $this->curl->setOpt(CURLOPT_CONNECTTIMEOUT, 3);
-        $this->curl->setOpt(CURLOPT_TIMEOUT, 300);
+        $this->applyCurlOptions();
 
         // Do Request
         $this->curl->get($uri, $parameters);
 
-        if ($this->curl->curlErrorCode == 28) {
+        if ($this->curl->curl_error_code == 28) {
             throw new \Exception('Connection timeout', 28);
         }
 
@@ -110,7 +132,6 @@ class ApiClient
         return $result;
     }
 
-
     /**
      * Get Category from API
      *
@@ -118,7 +139,7 @@ class ApiClient
      */
     public function getCategory($categoryId)
     {
-        return $this->call('categories/'.$categoryId);
+        return $this->call('categories/' . $categoryId);
     }
 
     /**
@@ -158,7 +179,7 @@ class ApiClient
      */
     public function getProduct($productId)
     {
-        return $this->call('products/'.$productId);
+        return $this->call('products/' . $productId);
     }
 
     /**
@@ -178,7 +199,7 @@ class ApiClient
      */
     public function getRelatedProducts($productId)
     {
-        return $this->call('related_products/'.$productId);
+        return $this->call('related_products/' . $productId);
     }
 
     /**
@@ -208,7 +229,7 @@ class ApiClient
      */
     public function getStore($storeId)
     {
-        return $this->call('stores/'.$storeId);
+        return $this->call('stores/' . $storeId);
     }
 
     /**
@@ -221,7 +242,7 @@ class ApiClient
         $method = 'category_tree';
 
         if ($categoryId !== null) {
-            $method .= '/'.$categoryId;
+            $method .= '/' . $categoryId;
         }
 
         return $this->call($method);
@@ -231,21 +252,22 @@ class ApiClient
      * Get deep tracking link
      *
      * Important: Because we match on the domain part to find the correct store
-     * it is important to only chose those store that have activated deeplink 
+     * it is important to only chose those store that have activated deeplink
      * see http://github.com/sunkan/Shopello-PHP/blob/master/deeplink.stores.txt
-     * 
+     *
      * Redirects will always go through. But no click will be registered
      */
-    public function getDeepTrackingLink($url, $channel_id=false) {
+    public function getDeepTrackingLink($url, $channel_id = false)
+    {
         if (!$this->apiEndpointInfo) {
             $this->apiEndpointInfo = parse_url($this->apiEndpoint);
         }
-        $base = $this->apiEndpointInfo['scheme'].'://'.$this->apiEndpointInfo['host'];
+        $base = $this->apiEndpointInfo['scheme'] . '://' . $this->apiEndpointInfo['host'];
         $base .= '/click/track?';
 
         $query = [
-            'api_key'=>$this->apiKey,
-            'url'=>$url
+            'api_key' => $this->apiKey,
+            'url' => $url,
         ];
         if ($channel_id) {
             $query['c'] = $channel_id;

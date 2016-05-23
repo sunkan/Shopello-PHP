@@ -17,12 +17,15 @@ class Api3Client
     private $apiPassword = null;
     private $apiEndpoint = null;
 
-
     /**
      * Get Params to send to API in all requests
      */
     private $apiGetParams = array();
 
+    /**
+     * Persistent curl options
+     */
+    private $curlOptions = array();
 
     /**
      * @param Curl $curl
@@ -32,7 +35,6 @@ class Api3Client
     {
         $this->curl = $curl;
     }
-
 
     /**
      * Set API Credentials
@@ -53,7 +55,8 @@ class Api3Client
      * @var string $apiUsername
      * @return void
      */
-    public function setApiUsername($apiUsername) {
+    public function setApiUsername($apiUsername)
+    {
         $this->apiUsername = $apiUsername;
     }
 
@@ -63,7 +66,8 @@ class Api3Client
      * @var string $apiPassword
      * @return void
      */
-    public function setApiPassword($apiPassword) {
+    public function setApiPassword($apiPassword)
+    {
         $this->apiPassword = $apiPassword;
     }
 
@@ -78,18 +82,16 @@ class Api3Client
         $this->apiKey = $apiKey;
     }
 
-
     /**
      * Set API Endpoint, for example: https://se.shopelloapi.com/v3/
      *
-     * @var strong $apiEndpoint
+     * @var string $apiEndpoint
      * @return void
      */
     public function setApiEndpoint($apiEndpoint)
     {
         $this->apiEndpoint = $apiEndpoint;
     }
-
 
     /**
      * Set GET Params to always append to URI (JSONP for now)
@@ -102,13 +104,63 @@ class Api3Client
         $this->apiGetParams = $params;
     }
 
+    /**
+     * Set persistent cURL options
+     *
+     * @param array(<curlopt_constant> => <value>) $options
+     */
+    public function setCurlOptions($options)
+    {
+        $this->curlOptions = $options;
+    }
+
+    /**
+     * Apply cURL options
+     */
+    private function applyCurlOptions($authMethod)
+    {
+        $this->curl->reset();
+
+        $this->curl->setUserAgent('Shopello-PHP API Client/1.0');
+
+        $this->curl->setOpt(CURLOPT_ENCODING, 'gzip');
+        $this->curl->setOpt(CURLOPT_HEADER, false);
+        $this->curl->setOpt(CURLOPT_NOBODY, false);
+        $this->curl->setOpt(CURLOPT_CONNECTTIMEOUT, 3);
+        $this->curl->setOpt(CURLOPT_TIMEOUT, 300);
+
+        $this->setAuthMethod($authMethod);
+
+        foreach ($this->curlOptions as $key => $value) {
+            $this->curl->setOpt($key, $value);
+        }
+    }
+
+    /**
+     * Set auth method for curl request
+     *
+     * @param string "apikey" or "basic"
+     */
+    private function setAuthMethod($authMethod)
+    {
+        switch ($authMethod) {
+            case 'apikey':
+                $this->curl->setHeader('X-API-KEY', $this->apiKey);
+                break;
+
+            case 'basic':
+            default:
+                $this->curl->setBasicAuthentication($this->apiUsername, $this->apiPassword);
+                break;
+        }
+    }
 
     /**
      * Make API-call
      */
     private function call($method, $uri, $getParams = array(), $postParams = array(), $authMethod = 'basic')
     {
-        $uri = $this->apiEndpoint.$uri;
+        $uri = $this->apiEndpoint . $uri;
 
         $getParams = array_merge($this->apiGetParams, $getParams);
 
@@ -121,26 +173,7 @@ class Api3Client
         );
 
         // CURL Stuff
-        $this->curl->reset();
-
-        $this->curl->setUserAgent('Shopello-PHP API Client/1.0');
-
-        switch ($authMethod) {
-            case 'apikey':
-                $this->curl->setHeader('X-API-KEY', $this->apiKey);
-                break;
-
-            case 'basic':
-            default:
-                $this->curl->setBasicAuthentication($this->apiUsername, $this->apiPassword);
-                break;
-        }
-
-        $this->curl->setOpt(CURLOPT_ENCODING, 'gzip');
-        $this->curl->setOpt(CURLOPT_HEADER, false);
-        $this->curl->setOpt(CURLOPT_NOBODY, false);
-        $this->curl->setOpt(CURLOPT_CONNECTTIMEOUT, 3);
-        $this->curl->setOpt(CURLOPT_TIMEOUT, 300);
+        $this->applyCurlOptions($authMethod);
 
         // Do Request
         switch ($method) {
@@ -149,7 +182,7 @@ class Api3Client
                 break;
 
             case 'post':
-                $this->curl->post($uri.'?'.http_build_query($getParams), $postParams);
+                $this->curl->post($uri . '?' . http_build_query($getParams), $postParams);
                 break;
 
             case 'delete':
@@ -157,14 +190,14 @@ class Api3Client
                 break;
 
             case 'put':
-                $this->curl->put($uri.'?'.http_build_query($getParams), $postParams);
+                $this->curl->put($uri . '?' . http_build_query($getParams), $postParams);
                 break;
 
             default:
                 throw new \Exception('Requested method behaviour is not defined yet');
         }
 
-        if ($this->curl->curlErrorCode == 28) {
+        if ($this->curl->curl_error_code == 28) {
             throw new \Exception('Connection timeout', 28);
         }
 
@@ -193,19 +226,32 @@ class Api3Client
         return $this->call('get', 'channel/');
     }
 
-    public function createChannel($name)
+    public function createChannel($name, $uri = null)
     {
-        return $this->call('post', 'channel/', array(), array('name' => $name));
+        $data = array(
+            'name' => $name,
+        );
+
+        if ($uri) {
+            $data['uri'] = $uri;
+        }
+
+        return $this->call('post', 'channel/', array(), $data);
+    }
+
+    public function updateChannel($id, $params = array())
+    {
+        return $this->call('post', 'channel/' . $id . '/', array(), $params);
     }
 
     public function deleteChannel($id)
     {
-        return $this->call('delete', 'channel/'.$id.'/');
+        return $this->call('delete', 'channel/' . $id . '/');
     }
 
     public function getChannelRevenue($id, $startDate, $endDate)
     {
-        return $this->call('get', 'channel/revenue/'.$id.'/'.$startDate.'/'.$endDate.'/');
+        return $this->call('get', 'channel/revenue/' . $id . '/' . $startDate . '/' . $endDate . '/');
     }
 
     /*******************************************************************************************************************
@@ -213,7 +259,7 @@ class Api3Client
      */
     public function getConsumerRevenue($startDate, $endDate)
     {
-        return $this->call('get', 'consumer/revenue/'.$startDate.'/'.$endDate.'/');
+        return $this->call('get', 'consumer/revenue/' . $startDate . '/' . $endDate . '/');
     }
 
     /*******************************************************************************************************************
@@ -230,10 +276,18 @@ class Api3Client
     }
 
     /*******************************************************************************************************************
+     * Store status log
+     */
+    public function getStoreStatusLog()
+    {
+        return $this->call('get', 'store/status_log/');
+    }
+
+    /*******************************************************************************************************************
      * Deeplink generator
      */
-    public function createDeepLink($uri)
+    public function createDeepLink($uri, $params = array())
     {
-        return $this->call('post', 'deepLinkGenerator/', array(), array('uri' => $uri), 'apikey');
+        return $this->call('post', 'deepLinkGenerator/', $params, array('uri' => $uri), 'apikey');
     }
 }
