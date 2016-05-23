@@ -8,19 +8,9 @@ use Exception;
 class ApiFactory
 {
     /**
-     * @var string Api username
+     * @var array Api credentials for diffrent countrys
      */
-    protected $username;
-
-    /**
-     * @var string Api password
-     */
-    protected $password;
-
-    /**
-     * @var array Api keys for diffrent countrys
-     */
-    protected $keys;
+    protected $credentials;
 
     /**
      * @var Curl
@@ -48,18 +38,13 @@ class ApiFactory
     /**
      * Constructor
      *
-     * @param string $username Api username
-     *
-     * @param string $pasword Api password
-     *
-     * @param array $keys Array of api keys mapped to country code
+     * @param Curl $curl Curl instance
+     * @param array $credentials Array of api credentials mapped to country code
      */
-    public function __construct(Curl $curl, $username, $password, array $keys)
+    public function __construct(Curl $curl, array $credentials)
     {
         $this->curl = $curl;
-        $this->username = $username;
-        $this->password = $password;
-        $this->keys = $keys;
+        $this->credentials = $credentials;
     }
 
     /**
@@ -72,10 +57,11 @@ class ApiFactory
         if (isset($this->instances['v1'][$country])) {
             return $this->instances['v1'][$country];
         }
-        if ($this->keys[$country]) {
+        if ($this->credentials[$country]) {
+            $credentials = $this->credentials[$country];
             $instance = $this->instances['v1'][$country] = new ApiClient($this->curl);
             $instance->setApiEndpoint($this->endpoints[$country] . '1/');
-            $instance->setApiKey($this->keys[$country]);
+            $instance->setApiKey($credentials['key']);
             return $this->instances['v1'][$country] = $instance;
         }
         throw Exception('Invalid country. No credentials found');
@@ -91,11 +77,12 @@ class ApiFactory
         if (isset($this->instances['v3'][$country])) {
             return $this->instances['v3'][$country];
         }
-        if ($this->keys[$country]) {
+        if ($this->credentials[$country]) {
+            $credentials = $this->credentials[$country];
             $instance = $this->instances['v3'][$country] = new Api3Client($this->curl);
-            $instance->setApiCredentials($this->username, $this->password);
+            $instance->setApiCredentials($credentials['username'], $credentials['password']);
             $instance->setApiEndpoint($this->endpoints[$country] . 'v3/');
-            $instance->setApiKey($this->keys[$country]);
+            $instance->setApiKey($credentials['key']);
             return $this->instances['v3'][$country] = $instance;
         }
         throw Exception('Invalid country. No credentials found');
