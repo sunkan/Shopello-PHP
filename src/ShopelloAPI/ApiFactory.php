@@ -64,7 +64,7 @@ class ApiFactory
             $instance->setApiKey($credentials['key']);
             return $this->instances['v1'][$country] = $instance;
         }
-        throw Exception('Invalid country. No credentials found');
+        throw new Exception('Invalid country. No credentials found');
     }
 
     /**
@@ -85,6 +85,6 @@ class ApiFactory
             $instance->setApiKey($credentials['key']);
             return $this->instances['v3'][$country] = $instance;
         }
-        throw Exception('Invalid country. No credentials found');
+        throw new Exception('Invalid country. No credentials found');
     }
 }
