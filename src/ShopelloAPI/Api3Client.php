@@ -272,6 +272,15 @@ class Api3Client
         return $this->call('get', 'store/status_log/');
     }
 
+	/*******************************************************************************************************************
+	 * Store deeplink enabled and disabled
+	 */
+	public function getDeeplinkStores($offset = 0)
+	{
+		$offset = $offset * 50;
+		return $this->call('get', 'store/deeplink-stores/'.$offset, array(), array(), 'apikey');
+	}
+
     /*******************************************************************************************************************
      * Deeplink generator
      */
