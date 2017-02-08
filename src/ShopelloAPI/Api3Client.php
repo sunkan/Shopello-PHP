@@ -273,6 +273,15 @@ class Api3Client
     }
 
     /*******************************************************************************************************************
+     * Deeplink status list
+     */
+    public function getDeeplinkStatusList($offset = 0)
+    {
+        $offset = $offset > 0 ? (int)$offset: '';
+        return $this->call('get', '/v3/store/deeplink-stores/'.$offset);
+    }
+
+    /*******************************************************************************************************************
      * Deeplink generator
      */
     public function createDeepLink($uri, $params = array())
